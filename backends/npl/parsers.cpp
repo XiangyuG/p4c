@@ -18,7 +18,7 @@
 #include "parsers.h"
 
 #include "frontends/common/resolveReferences/referenceMap.h"
-#include "frontends/p4/toP4/toP4.h"
+#include "frontends/p4/toNPL/toP4.h"
 #include "lib/nullstream.h"
 
 namespace graphs {
@@ -29,7 +29,9 @@ static cstring toString(const IR::Expression *expression) {
     std::stringstream ss;
     P4::ToP4 toP4(&ss, false);
     toP4.setListTerm("(", ")");
+    std::cout << "pre toString function ss.str() = " << ss.str() << std::endl;
     expression->apply(toP4);
+    std::cout << "post toString function ss.str() = " << ss.str() << std::endl;
     return cstring(ss.str());
 }
 
@@ -45,10 +47,12 @@ Graph *ParserGraphs::CreateSubGraph(Graph &currentSubgraph, const cstring &name)
 
 ParserGraphs::ParserGraphs(P4::ReferenceMap *refMap, const cstring &graphsDir)
     : refMap(refMap), graphsDir(graphsDir) {
+    std::cout << "Build a parser graph" << std::endl;
     visitDagOnce = false;
 }
 
 void ParserGraphs::postorder(const IR::P4Parser *parser) {
+    std::cout << "postorder(const IR::P4Parser *parser)" << std::endl;
     Graph *g_ = new Graph();
     g = CreateSubGraph(*g_, parser->name);
     boost::get_property(*g_, boost::graph_name) = parser->name;
@@ -76,12 +80,15 @@ void ParserGraphs::postorder(const IR::P4Parser *parser) {
 }
 
 void ParserGraphs::postorder(const IR::ParserState *state) {
+    std::cout << "postorder(const IR::ParserState *state)" << std::endl;
     auto parser = findContext<IR::P4Parser>();
     CHECK_NULL(parser);
     states[parser].push_back(state);
 }
 
 void ParserGraphs::postorder(const IR::PathExpression *expression) {
+    std::cout << expression->toString() << std::endl;
+    std::cout << "postorder(const IR::PathExpression *expression)" << std::endl; // 这里来过
     auto state = findContext<IR::ParserState>();
     if (state != nullptr) {
         auto parser = findContext<IR::P4Parser>();
@@ -102,6 +109,7 @@ void ParserGraphs::postorder(const IR::PathExpression *expression) {
 }
 
 void ParserGraphs::postorder(const IR::SelectExpression *expression) {
+    std::cout << "postorder(const IR::SelectExpression *expression)" << std::endl;
     // transition (..) { ... } may imply a transition to
     // "reject" - if none of the cases matches.
     for (auto c : expression->selectCases) {
