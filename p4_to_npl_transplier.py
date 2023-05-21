@@ -79,6 +79,7 @@ def parseKeyElement(dic):
     return match_key_list
 
 def parse_P4Table(dic):
+    # Parse the p4 table definition from json file
     ret_dic = {}
     table_name = dic['name']
     properties = dic['properties']
@@ -110,11 +111,64 @@ def parse_P4Table(dic):
     # print(ret_dic)
     return ret_dic
 
+def get_left_component(dic):
+    Node_Type = dic['Node_Type']
+    if Node_Type == 'Member':
+        member = dic['member']
+        expr = dic['expr']
+        expr_node_type = expr['Node_Type']
+        assert expr_node_type == 'PathExpression', 'We assume the LHS of expr is PathExpression'
+        path = expr['path']
+        var_name = path['name']
+        return var_name + '.' + member
+    else:
+        assert False, 'New Node_Type (other than Member) in LHS which is currently not supported'
+    return ""
+
+def get_right_component(dic):
+    Node_Type = dic['Node_Type']
+    assert Node_Type == 'PathExpression', "Only deal with PathExpression in Node_Type of RHS of the action"
+    return dic['path']['name']
+
+def parse_P4Action(dic):
+    # Parse the p4 action definition from json file
+    ret_dic = {}
+    # Get action name
+    action_name = dic['name']
+    # Get parameters in the action
+    parameters_list = []
+    parameters = dic['parameters']
+    parameters_vec = parameters['parameters']['vec']
+    for mem in parameters_vec:
+        parameter_name = mem['name']
+        parameter_type = mem['type']['Node_Type']
+        assert parameter_type == 'Type_Bits', "Currently support Type_Bits as the type for parameters in P4action"
+        bit_len = mem['type']['size']
+        parameters_list.append({'parameter_name':parameter_name, 'bit_len':bit_len})
+    # Get body of the action
+    action_body_list = []
+    body = dic['body']
+    components = body['components']
+    components_vec = components['vec']
+    for mem in components_vec:
+        Node_Type = mem['Node_Type']
+        if Node_Type == 'AssignmentStatement':
+            op = '='
+            left = get_left_component(mem['left'])
+            right = get_right_component(mem['right'])
+            action_body_list.append({'left':left, 'op':op, 'right':right})
+    ret_dic['action_name'] = action_name
+    ret_dic['parameters_list'] = parameters_list
+    ret_dic['action_body_list'] = action_body_list
+    # print("parse_P4Action:", ret_dic)
+    return ret_dic
+
 def parse_P4Control(dic):
-    # Parse the p4 table definition from json file
+    # Parse the p4 control definition from json file
     assert dic['Node_Type'] == 'P4Control', 'wrong node type (should be P4Control)'
     ret_dic = {}
     ctl_name = dic['name']
+    ret_dic['control name'] = ctl_name
     # TODO: Deal with "applyParams"
     for key in dic:
         if key == 'type':
@@ -130,17 +184,18 @@ def parse_P4Control(dic):
                 Node_Type = mem['Node_Type']
                 if Node_Type == 'P4Action':
                     action_name = mem['name']
-                    if action_name.find('NoAction') == -1:
+                    if action_name.find('NoAction') != -1:
                         continue
-                    # TODO: collect P4Action
+                    # DONE: collect P4Action
+                    action_list.append(parse_P4Action(mem))
                 elif Node_Type == 'P4Table':
-                    # TODO: collect P4Action
+                    # TODO: collect P4Table
                     table_dic = parse_P4Table(mem)
                     table_list.append(table_dic)
             ret_dic['action_list'] = action_list
             ret_dic['table_list'] = table_list
-
-    print("parse_P4Control", ret_dic)
+    
+    # print("parse_P4Control", ret_dic)
     return ret_dic
 
 def main(argv):
@@ -176,6 +231,10 @@ def main(argv):
             continue
         elif node_type == 'P4Control':
             P4Control_list.append(parse_P4Control(vec[i]))
-
+    # print("type_header_list =", type_header_list)
+    # print("type_struct_list =", type_struct_list)
+    for v in P4Control_list:
+        print(v)
+    # print("P4Control_list =", P4Control_list)
 if __name__ == '__main__':
     main(sys.argv)
