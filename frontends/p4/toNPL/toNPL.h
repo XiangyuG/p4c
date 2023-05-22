@@ -27,7 +27,7 @@ namespace P4 {
 This pass converts a P4-16 IR into a P4 source (text) program.
 It can optionally emit as comments a representation of the program IR.
 */
-class ToP4 : public Inspector {
+class ToNPL : public Inspector {
     int expressionPrecedence;  /// precedence of current IR::Operation
     bool isDeclaration;        /// current type is a declaration
     bool showIR;               /// if true dump IR as comments
@@ -90,7 +90,7 @@ class ToP4 : public Inspector {
         emitted. */
     cstring mainFile;
 
-    ToP4(Util::SourceCodeBuilder &builder, bool showIR, cstring mainFile = nullptr)
+    ToNPL(Util::SourceCodeBuilder &builder, bool showIR, cstring mainFile = nullptr)
         : expressionPrecedence(DBPrint::Prec_Low),
           isDeclaration(true),
           showIR(showIR),
@@ -99,9 +99,9 @@ class ToP4 : public Inspector {
           outStream(nullptr),
           mainFile(mainFile) {
         visitDagOnce = false;
-        setName("ToP4");
+        setName("ToNPL");
     }
-    ToP4(std::ostream *outStream, bool showIR, cstring mainFile = nullptr)
+    ToNPL(std::ostream *outStream, bool showIR, cstring mainFile = nullptr)
         : expressionPrecedence(DBPrint::Prec_Low),
           isDeclaration(true),
           showIR(showIR),
@@ -110,9 +110,9 @@ class ToP4 : public Inspector {
           outStream(outStream),
           mainFile(mainFile) {
         visitDagOnce = false;
-        setName("ToP4");
+        setName("ToNPL");
     }
-    ToP4()
+    ToNPL()
         :  // this is useful for debugging
           expressionPrecedence(DBPrint::Prec_Low),
           isDeclaration(true),
@@ -122,7 +122,7 @@ class ToP4 : public Inspector {
           outStream(&std::cout),
           mainFile(nullptr) {
         visitDagOnce = false;
-        setName("ToP4");
+        setName("ToNPL");
     }
 
     using Inspector::preorder;
@@ -267,8 +267,8 @@ class ToP4 : public Inspector {
     bool preorder(const IR::V1Program *) override { return false; }
 };
 
-std::string toP4(const IR::INode *node);
-void dumpP4(const IR::INode *node);
+std::string toNPL(const IR::INode *node);
+void dumpNPL(const IR::INode *node);
 
 }  // namespace P4
 

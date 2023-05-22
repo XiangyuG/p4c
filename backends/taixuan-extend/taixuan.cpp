@@ -23,7 +23,7 @@ limitations under the License.
 #include "frontends/common/parseInput.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/frontend.h"
-#include "frontends/p4/toP4/toP4.h"
+#include "frontends/p4/toNPL/toNPL.h"
 #include "ir/ir.h"
 #include "ir/json_loader.h"
 #include "lib/crash.h"
@@ -41,7 +41,7 @@ class P4TestOptions : public CompilerOptions {
     bool loadIRFromJson = false;
     bool prettyPrint = false;
     cstring pp_file = nullptr;
-    
+
     P4TestOptions() {
         registerOption(
             "--listMidendPasses", nullptr,
@@ -158,8 +158,8 @@ int main(int argc, char *const argv[]) {
 
     if (options.prettyPrint) {
         std::ostream *ppStream = openFile(options.pp_file, true);
-        P4::ToP4 top4(ppStream, false);
-        (void)program->apply(top4);
+        P4::ToNPL tonpl(ppStream, false);
+        (void)program->apply(tonpl);
     }
 
     log_dump(program, "Initial program");

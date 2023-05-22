@@ -24,7 +24,7 @@ limitations under the License.
 #include "frontends/p4/simplify.h"
 #include "frontends/p4/simplifyParsers.h"
 #include "frontends/p4/strengthReduction.h"
-#include "frontends/p4/toP4/toP4.h"
+#include "frontends/p4/toNPL/toNPL.h"
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/unusedDeclarations.h"
 #include "midend/actionSynthesis.h"

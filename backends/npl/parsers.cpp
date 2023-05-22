@@ -18,7 +18,7 @@
 #include "parsers.h"
 
 #include "frontends/common/resolveReferences/referenceMap.h"
-#include "frontends/p4/toNPL/toP4.h"
+#include "frontends/p4/toP4/toP4.h"
 #include "lib/nullstream.h"
 
 namespace graphs {
