@@ -28,7 +28,6 @@ limitations under the License.
 namespace P4 {
 
 Visitor::profile_t ToNPL::init_apply(const IR::Node *node) {
-    std::cout << "Come toNPL" << std::endl;
     LOG4("Program dump:" << std::endl << dumpToString(node));
     listTerminators_init_apply_size = listTerminators.size();
     vectorSeparator_init_apply_size = vectorSeparator.size();
@@ -36,7 +35,6 @@ Visitor::profile_t ToNPL::init_apply(const IR::Node *node) {
 }
 
 void ToNPL::end_apply(const IR::Node *) {
-    std::cout << "Come toNPL" << std::endl;
     if (outStream != nullptr) {
         cstring result = builder.toString();
         *outStream << result.c_str();
@@ -173,17 +171,17 @@ bool ToNPL::preorder(const IR::P4Program *program) {
                     if (P4V1::V1Model::instance.file.name == p) {
                         P4V1::getV1ModelVersion g;
                         program->apply(g);
-                        builder.append("#define V1MODEL_VERSION ");
-                        builder.append(g.version);
-                        builder.appendLine("");
+                        // ori: builder.append("#define V1MODEL_VERSION ");
+                        // ori: builder.append(g.version);
+                        // ori: builder.appendLine("");
                     }
-                    builder.append("#include <");
-                    builder.append(p);
-                    builder.appendLine(">");
+                    // ori: builder.append("#include <");
+                    // ori: builder.append(p);
+                    // ori: builder.appendLine(">");
                 } else {
-                    builder.append("#include \"");
-                    builder.append(sourceFile);
-                    builder.appendLine("\"");
+                    // ori: builder.append("#include \"");
+                    // ori: builder.append(sourceFile);
+                    // ori: builder.appendLine("\"");
                 }
                 includesEmitted.emplace(sourceFile);
             }
@@ -198,32 +196,44 @@ bool ToNPL::preorder(const IR::P4Program *program) {
     return false;
 }
 
+// example output: bit<8>
+// DONE with the second half
 bool ToNPL::preorder(const IR::Type_Bits *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_Bits *t)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::Type_Bits *t)" << t->toString() << std::endl;
+    // std::cout << "cccccccccccccc" << t->toString() << std::endl;
     if (t->expression) {
-        builder.append("bit<(");
+        // ori: builder.append("bit<(");
+        builder.append("bit[("); 
         visit(t->expression);
-        builder.append(")>");
+        // ori: builder.append(")>");
+        builder.append(")]"); 
     } else {
-        builder.append(t->toString());
+        // turn bit<...> to bit[...]
+        // TODO: find a better way to do such replace
+        cstring curr_str = t->toString();
+        curr_str = curr_str.replace('<', '[');
+        curr_str = curr_str.replace('>', ']');
+        // ori: builder.append(t->toString());
+        builder.append(curr_str);
     }
+    std::cout << "Exit ToNPL::preorder(const IR::Type_Bits *t)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Type_String *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_String *t)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_String *t)" << std::endl;
     builder.append(t->toString());
     return false;
 }
 
 bool ToNPL::preorder(const IR::Type_InfInt *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_InfInt *t)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_InfInt *t)" << std::endl;
     builder.append(t->toString());
     return false;
 }
 
 bool ToNPL::preorder(const IR::Type_Var *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_Var *t)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_Var *t)" << std::endl;
     builder.append(t->name);
     return false;
 }
@@ -235,58 +245,71 @@ bool ToNPL::preorder(const IR::Type_Unknown *) {
 }
 
 bool ToNPL::preorder(const IR::Type_Dontcare *) {
-    std::cout << "ToNPL::preorder(const IR::Type_Dontcare *)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_Dontcare *)" << std::endl;
     builder.append("_");
     return false;
 }
 
 bool ToNPL::preorder(const IR::Type_Void *) {
-    std::cout << "ToNPL::preorder(const IR::Type_Void *)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_Void *)" << std::endl;
     builder.append("void");
     return false;
 }
 
+// example output: Type_Name *t = MyDeparser
 bool ToNPL::preorder(const IR::Type_Name *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_Name *t)" << std::endl;
+    std::cout << "cccccccccccccc Enter ToNPL::preorder(const IR::Type_Name *t)" << t->toString() << std::endl;
     visit(t->path);
+    std::cout << "cccccccccccccc Exit ToNPL::preorder(const IR::Type_Name *t)" << std::endl;
     return false;
 }
 
+// example output: *t = vlan_tag_t[2]
 bool ToNPL::preorder(const IR::Type_Stack *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_Stack *t)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::Type_Stack *t)" << t->toString() << std::endl;
     dump(2);
     visit(t->elementType);
+    // ori: builder.append("[");
     builder.append("[");
     visit(t->size);
+    // ori: builder.append("]");
     builder.append("]");
+    std::cout << "Exit ToNPL::preorder(const IR::Type_Stack *t)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Type_Specialized *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_Specialized *t)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::Type_Specialized *t)" << t->toString() <<std::endl;
     dump(3);
     visit(t->baseType);
+    // ori: builder.append("<");
     builder.append("<");
     setVecSep(", ");
     visit(t->arguments);
     doneVec();
+    // ori: builder.append(">");
     builder.append(">");
+    std::cout << "Exit ToNPL::preorder(const IR::Type_Specialized *t)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Argument *arg) {
-    std::cout << "ToNPL::preorder(const IR::Argument *arg)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::Argument *arg)" << arg->toString() << std::endl;
     dump(2);
     if (!arg->name.name.isNullOrEmpty()) {
+        // ori: builder.append(arg->name.name);
+        // ori: builder.append(" = ");
         builder.append(arg->name.name);
         builder.append(" = ");
     }
     visit(arg->expression);
+    std::cout << "Exit ToNPL::preorder(const IR::Argument *arg)" << arg->toString() << std::endl;
     return false;
 }
 
+
 bool ToNPL::preorder(const IR::Type_Typedef *t) {
-    std::cout << "ToNPL::preorder(const IR::Typedef *t)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Typedef *t)" << std::endl;
     dump(2);
     if (!t->annotations->annotations.empty()) {
         visit(t->annotations);
@@ -301,7 +324,7 @@ bool ToNPL::preorder(const IR::Type_Typedef *t) {
 }
 
 bool ToNPL::preorder(const IR::Type_Newtype *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_Newtype *t)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_Newtype *t)" << std::endl;
     dump(2);
     if (!t->annotations->annotations.empty()) {
         visit(t->annotations);
@@ -316,7 +339,7 @@ bool ToNPL::preorder(const IR::Type_Newtype *t) {
 }
 
 bool ToNPL::preorder(const IR::Type_BaseList *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_BaseList *t)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_BaseList *t)" << std::endl;
     dump(3);
     builder.append("tuple<");
     bool first = true;
@@ -332,7 +355,7 @@ bool ToNPL::preorder(const IR::Type_BaseList *t) {
 }
 
 bool ToNPL::preorder(const IR::P4ValueSet *t) {
-    std::cout << "ToNPL::preorder(const IR::P4ValueSet *t)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::P4ValueSet *t)" << std::endl;
     dump(1);
     if (!t->annotations->annotations.empty()) {
         visit(t->annotations);
@@ -353,7 +376,7 @@ bool ToNPL::preorder(const IR::P4ValueSet *t) {
 }
 
 bool ToNPL::preorder(const IR::Type_Enum *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_Enum *t)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_Enum *t)" << std::endl;
     dump(1);
     if (!t->annotations->annotations.empty()) {
         visit(t->annotations);
@@ -377,7 +400,7 @@ bool ToNPL::preorder(const IR::Type_Enum *t) {
 }
 
 bool ToNPL::preorder(const IR::Type_SerEnum *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_SerEnum *t)" << std::endl;
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_SerEnum *t)" << std::endl;
     dump(1);
     if (!t->annotations->annotations.empty()) {
         visit(t->annotations);
@@ -405,7 +428,7 @@ bool ToNPL::preorder(const IR::Type_SerEnum *t) {
 }
 
 bool ToNPL::preorder(const IR::TypeParameters *t) {
-    std::cout << "ToNPL::preorder(const IR::TypeParameters *t)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::TypeParameters *t)" << t->toString() << std::endl;
     if (!t->empty()) {
         builder.append("<");
         bool first = true;
@@ -419,10 +442,12 @@ bool ToNPL::preorder(const IR::TypeParameters *t) {
         isDeclaration = decl;
         builder.append(">");
     }
+    std::cout << "Exit ToNPL::preorder(const IR::TypeParameters *t)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Method *m) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Method *t)" << std::endl;
     dump(1);
     if (!m->annotations->annotations.empty()) {
         visit(m->annotations);
@@ -448,6 +473,7 @@ bool ToNPL::preorder(const IR::Method *m) {
 }
 
 bool ToNPL::preorder(const IR::Function *function) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Function *function)" << std::endl;
     dump(1);
     auto t = function->type;
     BUG_CHECK(t != nullptr, "Function %1% has no type", function);
@@ -464,6 +490,7 @@ bool ToNPL::preorder(const IR::Function *function) {
 }
 
 bool ToNPL::preorder(const IR::Type_Extern *t) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_Extern *t)" << std::endl;
     dump(2);
     if (isDeclaration) {
         if (!t->annotations->annotations.empty()) {
@@ -495,11 +522,13 @@ bool ToNPL::preorder(const IR::Type_Extern *t) {
 }
 
 bool ToNPL::preorder(const IR::Type_Boolean *) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_Boolean *)" << std::endl;
     builder.append("bool");
     return false;
 }
 
 bool ToNPL::preorder(const IR::Type_Varbits *t) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_Varbits *t)" << std::endl;
     if (t->expression) {
         builder.append("varbit<(");
         visit(t->expression);
@@ -511,6 +540,7 @@ bool ToNPL::preorder(const IR::Type_Varbits *t) {
 }
 
 bool ToNPL::preorder(const IR::Type_Package *package) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Type_Package *package)" << std::endl;
     dump(2);
     builder.emitIndent();
     if (!package->annotations->annotations.empty()) {
@@ -526,6 +556,7 @@ bool ToNPL::preorder(const IR::Type_Package *package) {
 }
 
 bool ToNPL::process(const IR::Type_StructLike *t, const char *name) {
+    std::cout << "Enter ToNPL::process(const IR::Type_StructLike *t, const char *name)" << t->toString() << "name =" << name << std::endl;
     dump(2);
     if (isDeclaration) {
         builder.emitIndent();
@@ -533,13 +564,17 @@ bool ToNPL::process(const IR::Type_StructLike *t, const char *name) {
             visit(t->annotations);
             builder.spc();
         }
-        builder.appendFormat("%s ", name);
+        // ori: builder.appendFormat("%s ", name);
+        builder.appendFormat("%s ", "struct"); // in NPL, there are no differences between struct and header
     }
     builder.append(t->name);
     visit(t->typeParameters);
     if (!isDeclaration) return false;
     builder.spc();
     builder.blockStart();
+
+    builder.append("\tfields"); // NEW
+    builder.blockStart(); // NEW
 
     std::map<const IR::StructField *, cstring> type;
     size_t len = 0;
@@ -570,13 +605,17 @@ bool ToNPL::process(const IR::Type_StructLike *t, const char *name) {
         builder.append(f->name);
         builder.endOfStatement(true);
     }
-
+    builder.blockEnd(true); // NEW
     builder.blockEnd(true);
+    std::cout << "Exit ToNPL::process(const IR::Type_StructLike *t, const char *name)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Type_Parser *t) {
-    std::cout << "ToNPL::preorder(const IR::Type_Parser *t)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::Type_Parser *t)" << t->toString() << std::endl;
+    if (!startParser) {
+        startParser = true;
+    }
     dump(2);
     builder.emitIndent();
     if (!t->annotations->annotations.empty()) {
@@ -588,10 +627,12 @@ bool ToNPL::preorder(const IR::Type_Parser *t) {
     visit(t->typeParameters);
     visit(t->applyParams);
     if (isDeclaration) builder.endOfStatement();
+    std::cout << "Exit ToNPL::preorder(const IR::Type_Parser *t)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Type_Control *t) {
+    std::cout << "ToNPL::preorder(const IR::Type_Control *t)" << std::endl;
     dump(2);
     builder.emitIndent();
     if (!t->annotations->annotations.empty()) {
@@ -607,8 +648,9 @@ bool ToNPL::preorder(const IR::Type_Control *t) {
 }
 
 ///////////////////////
-
+// DONE constant is easy to update
 bool ToNPL::preorder(const IR::Constant *c) {
+    std::cout << "Enter ToNPL::preorder(const IR::Constant *c)" << c->toString() << std::endl;
     const IR::Type_Bits *tb = dynamic_cast<const IR::Type_Bits *>(c->type);
     unsigned width;
     bool sign;
@@ -620,21 +662,27 @@ bool ToNPL::preorder(const IR::Constant *c) {
         sign = tb->isSigned;
     }
     cstring s = Util::toString(c->value, width, sign, c->base);
+    // ori: builder.append(s);
     builder.append(s);
+    std::cout << "Exit ToNPL::preorder(const IR::Constant *c)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::BoolLiteral *b) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::BoolLiteral *b)" << std::endl;
     builder.append(b->toString());
     return false;
 }
 
 bool ToNPL::preorder(const IR::StringLiteral *s) {
+    std::cout << "Enter ToNPL::preorder(const IR::StringLiteral *s)" << s->toString() << std::endl;
     builder.append(s->toString());
+    std::cout << "Exit ToNPL::preorder(const IR::StringLiteral *s)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Declaration_Constant *cst) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Declaration_Constant *cst)" << std::endl;
     dump(2);
     if (!cst->annotations->annotations.empty()) {
         visit(cst->annotations);
@@ -657,6 +705,7 @@ bool ToNPL::preorder(const IR::Declaration_Constant *cst) {
 }
 
 bool ToNPL::preorder(const IR::Declaration_Instance *i) {
+    std::cout << "ToNPL::preorder(const IR::Declaration_Instance *i)" << std::endl;
     dump(3);
     if (!i->annotations->annotations.empty()) {
         visit(i->annotations);
@@ -681,6 +730,7 @@ bool ToNPL::preorder(const IR::Declaration_Instance *i) {
 }
 
 bool ToNPL::preorder(const IR::Declaration_Variable *v) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Declaration_Variable *v)" << std::endl;
     dump(2);
     if (!v->annotations->annotations.empty()) {
         visit(v->annotations);
@@ -701,7 +751,9 @@ bool ToNPL::preorder(const IR::Declaration_Variable *v) {
     return false;
 }
 
+// 先不用管
 bool ToNPL::preorder(const IR::Type_Error *d) {
+    std::cout << "Enter ToNPL::preorder(const IR::Type_Error *d)" << d->toString() << std::endl;
     dump(1);
     bool first = true;
     for (auto a : *d->getDeclarations()) {
@@ -723,10 +775,12 @@ bool ToNPL::preorder(const IR::Type_Error *d) {
         builder.newline();
         builder.blockEnd(true);
     }
+    std::cout << "Exit ToNPL::preorder(const IR::Type_Error *d)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Declaration_MatchKind *d) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Declaration_MatchKind *d)" << std::endl;
     dump(1);
     builder.append("match_kind ");
     builder.blockStart();
@@ -788,6 +842,7 @@ VECTOR_VISIT(IndexedVector, StatOrDecl)
 ///////////////////////////////////////////
 
 bool ToNPL::preorder(const IR::Slice *slice) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Slice *e)" << std::endl;
     int prec = expressionPrecedence;
     bool useParens = prec > slice->getPrecedence();
     if (useParens) builder.append("(");
@@ -808,6 +863,7 @@ bool ToNPL::preorder(const IR::Slice *slice) {
 }
 
 bool ToNPL::preorder(const IR::DefaultExpression *) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::DefaultExpression *e)" << std::endl;
     // Within a method call this is rendered as a don't care
     if (withinArgument)
         builder.append("_");
@@ -817,21 +873,31 @@ bool ToNPL::preorder(const IR::DefaultExpression *) {
 }
 
 bool ToNPL::preorder(const IR::This *) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::This *e)" << std::endl;
     builder.append("this");
     return false;
 }
 
 bool ToNPL::preorder(const IR::PathExpression *p) {
+    std::cout << "Enter ToNPL::preorder(const IR::PathExpression *e)" << p->toString() << std::endl;
+    // Ignore NoAction, TODO: find a better way to ignore
+    if (p->toString().find("NoAction")) {
+        std::cout << "Early Exit ToNPL::preorder(const IR::PathExpression *e)" << std::endl;
+        return false;
+    }
     visit(p->path);
+    std::cout << "Exit ToNPL::preorder(const IR::PathExpression *e)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::TypeNameExpression *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::TypeNameExpression *e)" << std::endl;
     visit(e->typeName);
     return false;
 }
 
 bool ToNPL::preorder(const IR::ConstructorCallExpression *e) {
+    std::cout << "ToNPL::preorder(const IR::ConstructorCallExpression *e)" << std::endl;
     visit(e->constructedType);
     builder.append("(");
     setVecSep(", ");
@@ -845,16 +911,19 @@ bool ToNPL::preorder(const IR::ConstructorCallExpression *e) {
 }
 
 bool ToNPL::preorder(const IR::Member *e) {
+    std::cout << "Enter ToNPL::preorder(const IR::Member *e)" << e->toString() << std::endl;
     int prec = expressionPrecedence;
     expressionPrecedence = e->getPrecedence();
     visit(e->expr);
     builder.append(".");
     builder.append(e->member);
     expressionPrecedence = prec;
+    std::cout << "Exit ToNPL::preorder(const IR::Member *e)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::SelectCase *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::SelectCase *e)" << std::endl;
     dump(2);
     int prec = expressionPrecedence;
     expressionPrecedence = DBPrint::Prec_Low;
@@ -868,6 +937,7 @@ bool ToNPL::preorder(const IR::SelectCase *e) {
 }
 
 bool ToNPL::preorder(const IR::SelectExpression *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::SelectExpression *e)" << std::endl;
     builder.append("select(");
     int prec = expressionPrecedence;
     expressionPrecedence = DBPrint::Prec_Low;
@@ -886,6 +956,7 @@ bool ToNPL::preorder(const IR::SelectExpression *e) {
 }
 
 bool ToNPL::preorder(const IR::ListExpression *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::ListExpression *e)" << std::endl;
     cstring start, end;
     if (listTerminators.empty()) {
         start = "{ ";
@@ -908,6 +979,7 @@ bool ToNPL::preorder(const IR::ListExpression *e) {
 }
 
 bool ToNPL::preorder(const IR::P4ListExpression *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::P4ListExpression *e)" << std::endl;
     if (expressionPrecedence > DBPrint::Prec_Prefix) builder.append("(");
     if (e->elementType != nullptr) {
         builder.append("(list<");
@@ -930,6 +1002,7 @@ bool ToNPL::preorder(const IR::P4ListExpression *e) {
 }
 
 bool ToNPL::preorder(const IR::NamedExpression *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::NamedExpression *e)" << std::endl;
     builder.append(e->name.name);
     builder.append(" = ");
     visit(e->expression);
@@ -937,6 +1010,7 @@ bool ToNPL::preorder(const IR::NamedExpression *e) {
 }
 
 bool ToNPL::preorder(const IR::StructExpression *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::StructExpression *e)" << std::endl;
     if (expressionPrecedence > DBPrint::Prec_Prefix) builder.append("(");
     if (e->structType != nullptr) {
         builder.append("(");
@@ -959,6 +1033,7 @@ bool ToNPL::preorder(const IR::StructExpression *e) {
 }
 
 bool ToNPL::preorder(const IR::HeaderStackExpression *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::HeaderStackExpression *e)" << std::endl;
     if (expressionPrecedence > DBPrint::Prec_Prefix) builder.append("(");
     if (e->headerStackType != nullptr) {
         builder.append("(");
@@ -981,21 +1056,25 @@ bool ToNPL::preorder(const IR::HeaderStackExpression *e) {
 }
 
 bool ToNPL::preorder(const IR::Invalid *) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Invalid *e)" << std::endl;
     builder.append("{#}");
     return false;
 }
 
 bool ToNPL::preorder(const IR::Dots *) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Dots *e)" << std::endl;
     builder.append("...");
     return false;
 }
 
 bool ToNPL::preorder(const IR::NamedDots *) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::NamedDots *e)" << std::endl;
     builder.append("...");
     return false;
 }
 
 bool ToNPL::preorder(const IR::InvalidHeader *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::InvalidHeader *e)" << std::endl;
     if (expressionPrecedence > DBPrint::Prec_Prefix) builder.append("(");
     builder.append("(");
     visit(e->headerType);
@@ -1006,6 +1085,7 @@ bool ToNPL::preorder(const IR::InvalidHeader *e) {
 }
 
 bool ToNPL::preorder(const IR::InvalidHeaderUnion *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::InvalidHeaderUnion *e)" << std::endl;
     if (expressionPrecedence > DBPrint::Prec_Prefix) builder.append("(");
     builder.append("(");
     visit(e->headerUnionType);
@@ -1016,6 +1096,12 @@ bool ToNPL::preorder(const IR::InvalidHeaderUnion *e) {
 }
 
 bool ToNPL::preorder(const IR::MethodCallExpression *e) {
+    std::cout << "Enter ToNPL::preorder(const IR::MethodCallExpression *e)" << e->toString() << std::endl;
+    // Ignore NoAction, TODO: find a better way to ignore
+    if (e->toString().find("NoAction")) {
+        std::cout << "Early Exit ToNPL::preorder(const IR::MethodCallExpression *e)" << std::endl;
+        return false;
+    }
     int prec = expressionPrecedence;
     bool useParens = (prec > DBPrint::Prec_Postfix) ||
                      (!e->typeArguments->empty() && prec >= DBPrint::Prec_Cond);
@@ -1045,10 +1131,12 @@ bool ToNPL::preorder(const IR::MethodCallExpression *e) {
     builder.append(")");
     if (useParens) builder.append(")");
     expressionPrecedence = prec;
+    std::cout << "Exit ToNPL::preorder(const IR::MethodCallExpression *e)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Operation_Binary *b) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Operation_Binary *b)" << std::endl;
     int prec = expressionPrecedence;
     bool useParens = prec > b->getPrecedence();
     if (useParens) builder.append("(");
@@ -1065,6 +1153,7 @@ bool ToNPL::preorder(const IR::Operation_Binary *b) {
 }
 
 bool ToNPL::preorder(const IR::Mux *b) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Mux *b)" << std::endl;
     int prec = expressionPrecedence;
     bool useParens = prec >= b->getPrecedence();
     if (useParens) builder.append("(");
@@ -1082,6 +1171,7 @@ bool ToNPL::preorder(const IR::Mux *b) {
 }
 
 bool ToNPL::preorder(const IR::Operation_Unary *u) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Operation_Unary *u)" << std::endl;
     int prec = expressionPrecedence;
     bool useParens = prec > u->getPrecedence();
     if (useParens) builder.append("(");
@@ -1094,6 +1184,7 @@ bool ToNPL::preorder(const IR::Operation_Unary *u) {
 }
 
 bool ToNPL::preorder(const IR::ArrayIndex *a) {
+    std::cout << "Enter ToNPL::preorder(const IR::ArrayIndex *a)" << a->toString() << std::endl;
     int prec = expressionPrecedence;
     bool useParens = prec > a->getPrecedence();
     if (useParens) builder.append("(");
@@ -1105,10 +1196,12 @@ bool ToNPL::preorder(const IR::ArrayIndex *a) {
     builder.append("]");
     if (useParens) builder.append(")");
     expressionPrecedence = prec;
+    std::cout << "Exit ToNPL::preorder(const IR::ArrayIndex *a)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Cast *c) {
+    std::cout << "这里暂时应该到不了  ToNPL::preorder(const IR::Cast *c)" << std::endl;
     int prec = expressionPrecedence;
     bool useParens = prec > c->getPrecedence();
     if (useParens) builder.append("(");
@@ -1125,6 +1218,8 @@ bool ToNPL::preorder(const IR::Cast *c) {
 //////////////////////////////////////////////////////////
 
 bool ToNPL::preorder(const IR::AssignmentStatement *a) {
+    std::cout << "ToNPL::preorder(const IR::AssignmentStatement *a)" << std::endl;
+    // Util::SourceCodeBuilder &tmp_builder = *new Util::SourceCodeBuilder();
     dump(2);
     visit(a->left);
     builder.append(" = ");
@@ -1134,6 +1229,7 @@ bool ToNPL::preorder(const IR::AssignmentStatement *a) {
 }
 
 bool ToNPL::preorder(const IR::BlockStatement *s) {
+    std::cout << "ToNPL::preorder(const IR::BlockStatement *s)" << std::endl;
     dump(1);
     if (!s->annotations->annotations.empty()) {
         visit(s->annotations);
@@ -1148,6 +1244,7 @@ bool ToNPL::preorder(const IR::BlockStatement *s) {
 }
 
 bool ToNPL::preorder(const IR::ExitStatement *) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::ExitStatement *)" << std::endl;
     dump(1);
     builder.append("exit");
     builder.endOfStatement();
@@ -1156,6 +1253,7 @@ bool ToNPL::preorder(const IR::ExitStatement *) {
 
 bool ToNPL::preorder(const IR::ReturnStatement *statement) {
     dump(2);
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::ReturnStatement *statement)" << std::endl;
     builder.append("return");
     if (statement->expression != nullptr) {
         builder.spc();
@@ -1165,13 +1263,18 @@ bool ToNPL::preorder(const IR::ReturnStatement *statement) {
     return false;
 }
 
+// Need change (DONE)
 bool ToNPL::preorder(const IR::EmptyStatement *) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::EmptyStatement *)" << std::endl;
     dump(1);
-    builder.endOfStatement();
+    // builder.endOfStatement();
+    builder.endOfStatement(); // change
     return false;
 }
 
+// Need change
 bool ToNPL::preorder(const IR::IfStatement *s) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::IfStatement *)" << std::endl;
     dump(2);
     builder.append("if (");
     visit(s->condition);
@@ -1209,6 +1312,7 @@ bool ToNPL::preorder(const IR::IfStatement *s) {
 }
 
 bool ToNPL::preorder(const IR::MethodCallStatement *s) {
+    std::cout << "ToNPL::preorder(const IR::MethodCallStatement *s)" << std::endl;
     dump(3);
     visit(s->methodCall);
     builder.endOfStatement();
@@ -1216,6 +1320,7 @@ bool ToNPL::preorder(const IR::MethodCallStatement *s) {
 }
 
 bool ToNPL::preorder(const IR::SwitchCase *s) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::SwitchCase *s)" << std::endl;
     visit(s->label);
     builder.append(": ");
     visit(s->statement);
@@ -1223,6 +1328,7 @@ bool ToNPL::preorder(const IR::SwitchCase *s) {
 }
 
 bool ToNPL::preorder(const IR::SwitchStatement *s) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::SwitchStatement *s)" << std::endl;
     dump(4);
     builder.append("switch (");
     visit(s->expression);
@@ -1238,6 +1344,7 @@ bool ToNPL::preorder(const IR::SwitchStatement *s) {
 ////////////////////////////////////
 
 bool ToNPL::preorder(const IR::Annotations *a) {
+    std::cout << "ToNPL::preorder(const IR::Annotations *a)" << std::endl;
     bool first = true;
     for (const auto *anno : a->annotations) {
         if (!first) {
@@ -1250,7 +1357,10 @@ bool ToNPL::preorder(const IR::Annotations *a) {
     return false;
 }
 
+// No need to record the annotation
 bool ToNPL::preorder(const IR::Annotation *a) {
+    std::cout << "Enter ToNPL::preorder(const IR::Annotation *a)" << a->toString() << std::endl;
+    /*
     builder.append("@");
     builder.append(a->name);
     char open = a->structured ? '[' : '(';
@@ -1294,10 +1404,13 @@ bool ToNPL::preorder(const IR::Annotation *a) {
         }
         builder.append(close);
     }
+    */
+   std::cout << "Exit ToNPL::preorder(const IR::Annotation *a)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Parameter *p) {
+    std::cout << "Enter ToNPL::preorder(const IR::Parameter *p)" << p->toString() << std::endl;
     dump(2);
     if (!p->annotations->annotations.empty()) {
         visit(p->annotations);
@@ -1328,10 +1441,13 @@ bool ToNPL::preorder(const IR::Parameter *p) {
         builder.append("=");
         visit(p->defaultValue);
     }
+    std::cout << "Exit ToNPL::preorder(const IR::Parameter *p)" << p->toString() << std::endl;
     return false;
 }
 
+// Definitely need change
 bool ToNPL::preorder(const IR::P4Control *c) {
+    std::cout << "ToNPL::preorder(const IR::P4Control *c)" << std::endl;
     dump(1);
     bool decl = isDeclaration;
     isDeclaration = false;
@@ -1355,6 +1471,7 @@ bool ToNPL::preorder(const IR::P4Control *c) {
 }
 
 bool ToNPL::preorder(const IR::ParameterList *p) {
+    std::cout << "Enter ToNPL::preorder(const IR::ParameterList *p)" << p->toString() << std::endl;
     builder.append("(");
     bool first = true;
     for (auto param : *p->getEnumerator()) {
@@ -1363,10 +1480,17 @@ bool ToNPL::preorder(const IR::ParameterList *p) {
         visit(param);
     }
     builder.append(")");
+    std::cout << "Exit ToNPL::preorder(const IR::ParameterList *p)" << p->toString() << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::P4Action *c) {
+    std::cout << "Enter ToNPL::preorder(const IR::P4Action *c)" << c->toString() << std::endl;
+    // Ignore NoAction TODO: find a better way to deal with it
+    if (c->toString().find("NoAction")) {
+        std::cout << "Early Exit ToNPL::preorder(const IR::P4Action *c)" << c->toString() << std::endl;
+        return false;
+    }
     dump(2);
     if (!c->annotations->annotations.empty()) {
         visit(c->annotations);
@@ -1377,10 +1501,12 @@ bool ToNPL::preorder(const IR::P4Action *c) {
     visit(c->parameters);
     builder.spc();
     visit(c->body);
+    std::cout << "Exit ToNPL::preorder(const IR::P4Action *c)" << c->toString() << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::ParserState *s) {
+    std::cout << "ToNPL::preorder(const IR::ParserState *s)" << std::endl;
     dump(1);
     if (s->isBuiltin()) return false;
 
@@ -1411,6 +1537,7 @@ bool ToNPL::preorder(const IR::ParserState *s) {
 }
 
 bool ToNPL::preorder(const IR::P4Parser *c) {
+    std::cout << "ToNPL::preorder(const IR::P4Parser *c)" << std::endl;
     dump(1);
     bool decl = isDeclaration;
     isDeclaration = false;
@@ -1434,33 +1561,40 @@ bool ToNPL::preorder(const IR::P4Parser *c) {
 }
 
 bool ToNPL::preorder(const IR::ExpressionValue *v) {
+    std::cout << "Enter ToNPL::preorder(const IR::ExpressionValue *v)" << v->toString() << std::endl;
     dump(2);
     visit(v->expression);
     builder.endOfStatement();
+    std::cout << "Exit ToNPL::preorder(const IR::ExpressionValue *v)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::ActionListElement *ale) {
+    std::cout << "Enter ToNPL::preorder(const IR::ActionListElement *ale)" << ale->toString() << std::endl;
     dump(3);
     if (!ale->annotations->annotations.empty()) {
         visit(ale->annotations);
         builder.spc();
     }
     visit(ale->expression);
+    std::cout << "Exit ToNPL::preorder(const IR::ActionListElement *ale)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::ActionList *v) {
+    std::cout << "Enter ToNPL::preorder(const IR::ActionList *v)" << v->toString() << std::endl;
     dump(2);
     builder.blockStart();
     setVecSep(";\n", ";\n");
     preorder(&v->actionList);
     doneVec();
     builder.blockEnd(false);
+    std::cout << "Exit ToNPL::preorder(const IR::ActionList *v)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::Key *v) {
+    std::cout << "ToNPL::preorder(const IR::Key *v)" << std::endl;
     dump(2);
     builder.blockStart();
 
@@ -1496,19 +1630,38 @@ bool ToNPL::preorder(const IR::Key *v) {
 }
 
 bool ToNPL::preorder(const IR::Property *p) {
+    std::cout << "Enter ToNPL::preorder(const IR::Property *p)" << p->toString() << std::endl;
     dump(1);
     if (!p->annotations->annotations.empty()) {
         visit(p->annotations);
         builder.spc();
     }
     if (p->isConstant) builder.append("const ");
-    builder.append(p->name);
-    builder.append(" = ");
+    // ori: builder.append(p->name);
+    // ori: builder.append(" = ");
+    if (p->name == "key") {
+        builder.append("key_construct() ");
+    } else if (p->name == "actions") {
+        builder.append(p->name);
+        builder.append(" = ");
+    } else if (p->name == "size") {
+        builder.append("maxsize : ");
+        visit(p->value);
+        builder.newline();
+        // TODO: better way instead of setting \t\t
+        builder.append("\t\tminsize : ");
+        // visit(p->value);
+    } else if (p->name == "default_action") {
+        builder.append(p->name);
+        builder.append(" = ");
+    }
     visit(p->value);
+    std::cout << "Exit ToNPL::preorder(const IR::Property *p)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::TableProperties *t) {
+    std::cout << "ToNPL::preorder(const IR::TableProperties *t)" << std::endl;
     for (auto p : t->properties) {
         builder.emitIndent();
         visit(p);
@@ -1518,6 +1671,7 @@ bool ToNPL::preorder(const IR::TableProperties *t) {
 }
 
 bool ToNPL::preorder(const IR::EntriesList *l) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::EntriesList *l)" << std::endl;
     dump(1);
     builder.append("{");
     builder.newline();
@@ -1530,6 +1684,7 @@ bool ToNPL::preorder(const IR::EntriesList *l) {
 }
 
 bool ToNPL::preorder(const IR::Entry *e) {
+    std::cout << "这里暂时应该到不了 ToNPL::preorder(const IR::Entry *e)" << std::endl;
     dump(2);
     builder.emitIndent();
     if (e->keys->components.size() == 1)
@@ -1548,34 +1703,42 @@ bool ToNPL::preorder(const IR::Entry *e) {
 }
 
 bool ToNPL::preorder(const IR::P4Table *c) {
+    std::cout << "ToNPL::preorder(const IR::P4Table *c)" << std::endl;
     dump(2);
     if (!c->annotations->annotations.empty()) {
         visit(c->annotations);
         builder.spc();
     }
-    builder.append("table ");
+    // builder.append("table ");
+    builder.append("logical_table ");
     builder.append(c->name);
     builder.spc();
     builder.blockStart();
     setVecSep("\n", "\n");
+    // assume it is always an index table
+    builder.append("\t\ttable_type : index\n");
     visit(c->properties);
     doneVec();
     builder.blockEnd(false);
     return false;
 }
 
+// Need change (DONE) example output: standard_metadata_t
 bool ToNPL::preorder(const IR::Path *p) {
+    std::cout << "--------------ToNPL::preorder(const IR::Path *p)" << p->asString() << std::endl;
+    // builder.append(p->asString());
     builder.append(p->asString());
     return false;
 }
 
+// No need to change
 std::string toNPL(const IR::INode *node) {
     std::stringstream stream;
     P4::ToNPL toNPL(&stream, false);
     node->getNode()->apply(toNPL);
     return stream.str();
 }
-
+// No need to change
 void dumpNPL(const IR::INode *node) {
     auto s = toNPL(node);
     std::cout << s;

@@ -34,7 +34,7 @@ class ToNPL : public Inspector {
     bool withinArgument;       /// if true we are within a method call argument
     bool noIncludes = false;   /// If true do not generate #include statements.
                                /// Used for debugging.
-
+    bool startParser = false;
     struct VecPrint {
         cstring separator;
         cstring terminator;
@@ -80,6 +80,7 @@ class ToNPL : public Inspector {
  public:
     // Output is constructed here
     Util::SourceCodeBuilder &builder;
+    Util::SourceCodeBuilder &npl_builder;
     /* FIXME  -- simplify this by getting rid of the 'builder' object and just emitting
      * directly to the ostream.  The SourceCodeBuilder object does not appear to add any
      * useful functionality the ostream does not already provide; it just serves to
@@ -96,6 +97,7 @@ class ToNPL : public Inspector {
           showIR(showIR),
           withinArgument(false),
           builder(builder),
+          npl_builder(*new Util::SourceCodeBuilder()),
           outStream(nullptr),
           mainFile(mainFile) {
         visitDagOnce = false;
@@ -107,6 +109,7 @@ class ToNPL : public Inspector {
           showIR(showIR),
           withinArgument(false),
           builder(*new Util::SourceCodeBuilder()),
+          npl_builder(*new Util::SourceCodeBuilder()),
           outStream(outStream),
           mainFile(mainFile) {
         visitDagOnce = false;
@@ -119,6 +122,7 @@ class ToNPL : public Inspector {
           showIR(false),
           withinArgument(false),
           builder(*new Util::SourceCodeBuilder()),
+          npl_builder(*new Util::SourceCodeBuilder()),
           outStream(&std::cout),
           mainFile(nullptr) {
         visitDagOnce = false;
@@ -163,6 +167,7 @@ class ToNPL : public Inspector {
     bool preorder(const IR::Type_Unknown *t) override;
     bool preorder(const IR::Type_BaseList *t) override;
     bool preorder(const IR::Type *t) override {
+        std::cout << "Here is the rest!!!!" << std::endl;
         builder.append(t->toString());
         return false;
     }
