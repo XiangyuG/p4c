@@ -121,6 +121,18 @@ class DumpIR : public Inspector {
 };
 }  // namespace
 
+void add(int &cnt) {
+    cnt++;
+}
+
+void sub(int &cnt) {
+    cnt--;
+}
+
+std::string build_string(int val) {
+    return std::string(val, '\t');
+}
+
 unsigned ToNPL::curDepth() const {
     unsigned result = 0;
     auto ctx = getContext();
@@ -565,7 +577,7 @@ bool ToNPL::process(const IR::Type_StructLike *t, const char *name) {
             builder.spc();
         }
         // ori: builder.appendFormat("%s ", name);
-        builder.appendFormat("%s ", "struct"); // in NPL, there are no differences between struct and header
+        builder.appendFormat("%s ", "struct"); // NEW in NPL, there are no differences between struct and header
     }
     builder.append(t->name);
     visit(t->typeParameters);
@@ -614,6 +626,11 @@ bool ToNPL::process(const IR::Type_StructLike *t, const char *name) {
 bool ToNPL::preorder(const IR::Type_Parser *t) {
     std::cout << "Enter ToNPL::preorder(const IR::Type_Parser *t)" << t->toString() << std::endl;
     if (!startParser) {
+        builder.append("parser_node start"); // NEW
+        builder.blockStart(); // NEW
+        builder.append("\t root_node : 1;\n"); // NEW
+        builder.append("\t end_node : 1;\n"); // NEW
+        builder.blockEnd(true); // NEW
         startParser = true;
     }
     dump(2);
@@ -705,7 +722,7 @@ bool ToNPL::preorder(const IR::Declaration_Constant *cst) {
 }
 
 bool ToNPL::preorder(const IR::Declaration_Instance *i) {
-    std::cout << "ToNPL::preorder(const IR::Declaration_Instance *i)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::Declaration_Instance *i)" << i->toString() << std::endl;
     dump(3);
     if (!i->annotations->annotations.empty()) {
         visit(i->annotations);
@@ -726,6 +743,7 @@ bool ToNPL::preorder(const IR::Declaration_Instance *i) {
         visit(i->initializer);
     }
     builder.endOfStatement();
+    std::cout << "Exit ToNPL::preorder(const IR::Declaration_Instance *i)" << std::endl;
     return false;
 }
 
@@ -897,7 +915,7 @@ bool ToNPL::preorder(const IR::TypeNameExpression *e) {
 }
 
 bool ToNPL::preorder(const IR::ConstructorCallExpression *e) {
-    std::cout << "ToNPL::preorder(const IR::ConstructorCallExpression *e)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::ConstructorCallExpression *e)" << e->toString() << std::endl;
     visit(e->constructedType);
     builder.append("(");
     setVecSep(", ");
@@ -907,6 +925,7 @@ bool ToNPL::preorder(const IR::ConstructorCallExpression *e) {
     expressionPrecedence = prec;
     doneVec();
     builder.append(")");
+    std::cout << "Exit ToNPL::preorder(const IR::ConstructorCallExpression *e)" << std::endl;
     return false;
 }
 
@@ -916,7 +935,14 @@ bool ToNPL::preorder(const IR::Member *e) {
     expressionPrecedence = e->getPrecedence();
     visit(e->expr);
     builder.append(".");
-    builder.append(e->member);
+    std::cout << "e->member = " << e->member << std::endl;
+    if (e->member == "apply") {
+        // Assume we would look up at most once per table
+        // TODO: consider other scenarios
+        builder.append("lookup"); // NEW
+    } else {
+        builder.append(e->member);
+    }
     expressionPrecedence = prec;
     std::cout << "Exit ToNPL::preorder(const IR::Member *e)" << std::endl;
     return false;
@@ -1218,18 +1244,19 @@ bool ToNPL::preorder(const IR::Cast *c) {
 //////////////////////////////////////////////////////////
 
 bool ToNPL::preorder(const IR::AssignmentStatement *a) {
-    std::cout << "ToNPL::preorder(const IR::AssignmentStatement *a)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::AssignmentStatement *a)" << std::endl;
     // Util::SourceCodeBuilder &tmp_builder = *new Util::SourceCodeBuilder();
     dump(2);
     visit(a->left);
     builder.append(" = ");
     visit(a->right);
     builder.endOfStatement();
+    std::cout << "Exit ToNPL::preorder(const IR::AssignmentStatement *a)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::BlockStatement *s) {
-    std::cout << "ToNPL::preorder(const IR::BlockStatement *s)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::BlockStatement *s)" << s->toString() << std::endl;
     dump(1);
     if (!s->annotations->annotations.empty()) {
         visit(s->annotations);
@@ -1240,6 +1267,7 @@ bool ToNPL::preorder(const IR::BlockStatement *s) {
     preorder(&s->components);
     doneVec();
     builder.blockEnd(false);
+    std::cout << "Exit ToNPL::preorder(const IR::BlockStatement *s)" << std::endl;
     return false;
 }
 
@@ -1312,10 +1340,11 @@ bool ToNPL::preorder(const IR::IfStatement *s) {
 }
 
 bool ToNPL::preorder(const IR::MethodCallStatement *s) {
-    std::cout << "ToNPL::preorder(const IR::MethodCallStatement *s)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::MethodCallStatement *s)" << s->toString() << std::endl;
     dump(3);
     visit(s->methodCall);
     builder.endOfStatement();
+    std::cout << "Exit ToNPL::preorder(const IR::MethodCallStatement *s)" << std::endl;
     return false;
 }
 
@@ -1344,7 +1373,7 @@ bool ToNPL::preorder(const IR::SwitchStatement *s) {
 ////////////////////////////////////
 
 bool ToNPL::preorder(const IR::Annotations *a) {
-    std::cout << "ToNPL::preorder(const IR::Annotations *a)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::Annotations *a)" << a->toString() << std::endl;
     bool first = true;
     for (const auto *anno : a->annotations) {
         if (!first) {
@@ -1354,6 +1383,7 @@ bool ToNPL::preorder(const IR::Annotations *a) {
         }
         visit(anno);
     }
+    std::cout << "Exit ToNPL::preorder(const IR::Annotations *a)" << std::endl;
     return false;
 }
 
@@ -1445,9 +1475,14 @@ bool ToNPL::preorder(const IR::Parameter *p) {
     return false;
 }
 
+
+
 // Definitely need change
 bool ToNPL::preorder(const IR::P4Control *c) {
-    std::cout << "ToNPL::preorder(const IR::P4Control *c)" << std::endl;
+    add(count);
+    std::cout << build_string(count);
+    // std::cout << "Enter ToNPL::preorder(const IR::P4Control *c)" << c->name << std::endl;  // Control name
+    std::cout << "Enter ToNPL::preorder(const IR::P4Control *c)" << c->toString() << std::endl;
     dump(1);
     bool decl = isDeclaration;
     isDeclaration = false;
@@ -1467,6 +1502,9 @@ bool ToNPL::preorder(const IR::P4Control *c) {
     visit(c->body);
     builder.newline();
     builder.blockEnd(true);
+    std::cout << build_string(count);
+    sub(count);
+    std::cout << "Exit ToNPL::preorder(const IR::P4Control *c)" << std::endl;
     return false;
 }
 
@@ -1480,15 +1518,28 @@ bool ToNPL::preorder(const IR::ParameterList *p) {
         visit(param);
     }
     builder.append(")");
-    std::cout << "Exit ToNPL::preorder(const IR::ParameterList *p)" << p->toString() << std::endl;
+    std::cout << "Exit ToNPL::preorder(const IR::ParameterList *p)" << std::endl;
     return false;
+}
+
+void update_para_map(std::map<cstring, std::string> &para_mp, const IR::P4Action *c, bool showIR) {
+    if (c->parameters) {
+        for (auto &a : c->parameters->parameters) {
+            std::string key_str = a->toString().c_str();
+            Util::SourceCodeBuilder tmp_builder;
+            ToNPL rec(tmp_builder, showIR);
+            a->type->apply(rec);
+            std::string val_str = tmp_builder.toString().c_str();
+            para_mp[key_str] = val_str;
+        }
+    }
 }
 
 bool ToNPL::preorder(const IR::P4Action *c) {
     std::cout << "Enter ToNPL::preorder(const IR::P4Action *c)" << c->toString() << std::endl;
     // Ignore NoAction TODO: find a better way to deal with it
     if (c->toString().find("NoAction")) {
-        std::cout << "Early Exit ToNPL::preorder(const IR::P4Action *c)" << c->toString() << std::endl;
+        std::cout << "Early Exit ToNPL::preorder(const IR::P4Action *c)" << std::endl;
         return false;
     }
     dump(2);
@@ -1496,12 +1547,41 @@ bool ToNPL::preorder(const IR::P4Action *c) {
         visit(c->annotations);
         builder.spc();
     }
-    builder.append("action ");
-    builder.append(c->name);
-    visit(c->parameters);
-    builder.spc();
-    visit(c->body);
-    std::cout << "Exit ToNPL::preorder(const IR::P4Action *c)" << c->toString() << std::endl;
+
+    // Update the action_para_map
+    action_para_map[c->name] = {};
+    update_para_map(action_para_map[c->name], c, showIR);
+    // for (auto &a : action_para_map) {
+    //     std::cout << "a.first = " << a.first << std::endl;
+    //     for (auto &v : a.second) {
+    //         std::cout << "v.first = " << v.first << " v.second = " << v.second << std::endl;
+    //     }
+    // }
+
+    // ori: builder.append("action ");
+    // ori: builder.append(c->name);
+    // ori: visit(c->parameters);
+    // ori: builder.spc();
+    // ori: visit(c->body);
+    // Assume one action per table; TODO: support multiple actions
+    // builder.append("fields_assign() "); // NEW
+    // builder.blockStart(); // NEW
+    // builder.append("\t\tif (_LOOKUP0)"); // NEW
+    // visit(c->body); // NEW
+    // builder.blockEnd(true); // NEW
+    // NEW start:
+    Util::SourceCodeBuilder tmp_builder;
+    ToNPL rec(tmp_builder, showIR);
+    c->body->apply(rec);
+    cstring s = tmp_builder.toString();
+    s = "\t\tfields_assign() { \n\t\t\tif (_LOOKUP0 == 1) " + s;
+    s += " \n\t\t}";
+    // std::cout << "--------------s = " << s << std::endl;
+    std::string new_string = s.c_str();
+    action_map[c->name] = new_string;
+    // NEW end
+        
+    std::cout << "Exit ToNPL::preorder(const IR::P4Action *c)" << std::endl;
     return false;
 }
 
@@ -1593,8 +1673,14 @@ bool ToNPL::preorder(const IR::ActionList *v) {
     return false;
 }
 
+void print_kf(std::map<const IR::KeyElement *, cstring> kf) {
+    for (auto &v : kf) {
+        std::cout << "v.first->toString() = " << v.first->toString() << "v.second = " << v.second << std::endl;
+    }
+}
+
 bool ToNPL::preorder(const IR::Key *v) {
-    std::cout << "ToNPL::preorder(const IR::Key *v)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::Key *v)" << v->toString() << std::endl;
     dump(2);
     builder.blockStart();
 
@@ -1609,24 +1695,48 @@ bool ToNPL::preorder(const IR::Key *v) {
         if (s.size() > len) len = s.size();
         kf.emplace(f, s);
     }
-
+    // print_kf(kf); // New test what is stored in kf
+    // Ori:
+    // for (auto f : v->keyElements) {
+    //     dump(2, f, 2);
+    //     builder.emitIndent();
+    //     cstring s = get(kf, f);
+    //     builder.append(s);
+    //     size_t spaces = len - s.size();
+    //     builder.append(std::string(spaces, ' '));
+    //     builder.append(": ");
+    //     visit(f->matchType);
+    //     if (!f->annotations->annotations.empty()) {
+    //         builder.append(" ");
+    //         visit(f->annotations);
+    //     }
+    //     builder.endOfStatement(true);
+    // }
+    int num = 0;
     for (auto f : v->keyElements) {
         dump(2, f, 2);
         builder.emitIndent();
         cstring s = get(kf, f);
+        // Format: Vi = A.B.C.macda
+        std::string var = "V" + std::to_string(num);
+        num++;
+        builder.append(var);
+        builder.append(" = ");
         builder.append(s);
-        size_t spaces = len - s.size();
-        builder.append(std::string(spaces, ' '));
-        builder.append(": ");
-        visit(f->matchType);
-        if (!f->annotations->annotations.empty()) {
-            builder.append(" ");
-            visit(f->annotations);
-        }
         builder.endOfStatement(true);
     }
     builder.blockEnd(false);
+    std::cout << "Exit ToNPL::preorder(const IR::Key *v)" << std::endl;
     return false;
+}
+
+// Collect all actions from one table
+std::vector<cstring> collect_action_from_list(const IR::ActionList *v) {
+    std::vector<cstring> ret_vec;
+    for (auto act : v->actionList) {
+        ret_vec.push_back(act->toString());
+    }
+    return ret_vec;
 }
 
 bool ToNPL::preorder(const IR::Property *p) {
@@ -1641,32 +1751,56 @@ bool ToNPL::preorder(const IR::Property *p) {
     // ori: builder.append(" = ");
     if (p->name == "key") {
         builder.append("key_construct() ");
+        visit(p->value);
     } else if (p->name == "actions") {
-        builder.append(p->name);
-        builder.append(" = ");
+        // ori: builder.append(p->name);
+        // ori: builder.append(" = ");
+        // ori: visit(p->value);
+
+        // Collect all actions' names because we know that p->value is the type ()
+        std::vector<cstring> vec = collect_action_from_list((const IR::ActionList*)p->value);
+        // First of all, generate fields {} for all parameters in the action
+        builder.append("fields ");
+        builder.blockStart();
+        for (cstring cstr : vec) {
+            for (auto &a : action_para_map[cstr]) {
+                builder.append("\t\t\t" + a.second + "   " + a.first + ";\n");
+            }
+        }
+        builder.blockEnd(true);
+        for (cstring cstr : vec) {
+            builder.append(action_map[cstr]);
+        }
     } else if (p->name == "size") {
+        // DONE
         builder.append("maxsize : ");
         visit(p->value);
         builder.newline();
         // TODO: better way instead of setting \t\t
         builder.append("\t\tminsize : ");
+        visit(p->value);
         // visit(p->value);
     } else if (p->name == "default_action") {
         builder.append(p->name);
         builder.append(" = ");
+        visit(p->value);
     }
-    visit(p->value);
     std::cout << "Exit ToNPL::preorder(const IR::Property *p)" << std::endl;
     return false;
 }
 
 bool ToNPL::preorder(const IR::TableProperties *t) {
-    std::cout << "ToNPL::preorder(const IR::TableProperties *t)" << std::endl;
+    add(count);
+    std::cout << build_string(count);
+    std::cout << "Enter ToNPL::preorder(const IR::TableProperties *t)" << std::endl;
     for (auto p : t->properties) {
         builder.emitIndent();
         visit(p);
         builder.newline();
     }
+    std::cout << build_string(count);
+    sub(count);
+    std::cout << "Exit ToNPL::preorder(const IR::TableProperties *t)" << std::endl;
     return false;
 }
 
@@ -1702,8 +1836,24 @@ bool ToNPL::preorder(const IR::Entry *e) {
     return false;
 }
 
+// Check the match type of this table
+std::string find_match_type(const IR::P4Table *c) {
+    const IR::Key* k =  c->getKey();
+    if (!k) {
+        return "exact";
+    }
+    IR::Vector<IR::KeyElement> keys = k->keyElements;
+    for (const IR::KeyElement* key : keys) {
+        if (key->matchType->toString() != "exact") {
+            return key->matchType->toString().c_str();
+        }
+    }
+    return "exact";
+}
+
 bool ToNPL::preorder(const IR::P4Table *c) {
     std::cout << "ToNPL::preorder(const IR::P4Table *c)" << std::endl;
+    
     dump(2);
     if (!c->annotations->annotations.empty()) {
         visit(c->annotations);
@@ -1715,8 +1865,14 @@ bool ToNPL::preorder(const IR::P4Table *c) {
     builder.spc();
     builder.blockStart();
     setVecSep("\n", "\n");
-    // assume it is always an index table
-    builder.append("\t\ttable_type : index\n");
+    // exact match -> table_type : index; other types of match -> table_type : tcam; 
+    std::string tmp_str = find_match_type(c);
+    assert(tmp_str == "exact" || tmp_str == "ternary" || tmp_str == "lpm");
+    if (tmp_str == "exact") {
+        builder.append("\t\ttable_type : index;\n");
+    } else {
+        builder.append("\t\ttable_type : tcam;\n");
+    }
     visit(c->properties);
     doneVec();
     builder.blockEnd(false);

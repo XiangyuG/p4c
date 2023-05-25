@@ -35,6 +35,8 @@ class ToNPL : public Inspector {
     bool noIncludes = false;   /// If true do not generate #include statements.
                                /// Used for debugging.
     bool startParser = false;
+
+    int count = 0;
     struct VecPrint {
         cstring separator;
         cstring terminator;
@@ -54,6 +56,10 @@ class ToNPL : public Inspector {
     size_t vectorSeparator_init_apply_size;
     std::vector<ListPrint> listTerminators;
     size_t listTerminators_init_apply_size;
+
+    std::map<cstring, std::string> action_map; // NEW key: action name, value: action content
+    // NEW key: action name; value: map<..., ...> key: parameter name in action, value: parameter type
+    std::map<cstring, std::map<cstring, std::string>> action_para_map; 
 
     void setVecSep(const char *sep, const char *term = nullptr) {
         vectorSeparator.push_back(VecPrint(sep, term));
