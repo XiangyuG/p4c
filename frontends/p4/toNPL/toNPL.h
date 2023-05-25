@@ -35,6 +35,7 @@ class ToNPL : public Inspector {
     bool noIncludes = false;   /// If true do not generate #include statements.
                                /// Used for debugging.
     bool startParser = false;
+    bool isapply = false;
 
     int count = 0;
     struct VecPrint {

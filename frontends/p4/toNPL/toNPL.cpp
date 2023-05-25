@@ -292,15 +292,15 @@ bool ToNPL::preorder(const IR::Type_Stack *t) {
 
 bool ToNPL::preorder(const IR::Type_Specialized *t) {
     std::cout << "Enter ToNPL::preorder(const IR::Type_Specialized *t)" << t->toString() <<std::endl;
+    // ori beg
     dump(3);
     visit(t->baseType);
-    // ori: builder.append("<");
     builder.append("<");
     setVecSep(", ");
     visit(t->arguments);
     doneVec();
-    // ori: builder.append(">");
     builder.append(">");
+    // ori end
     std::cout << "Exit ToNPL::preorder(const IR::Type_Specialized *t)" << std::endl;
     return false;
 }
@@ -634,16 +634,19 @@ bool ToNPL::preorder(const IR::Type_Parser *t) {
         startParser = true;
     }
     dump(2);
-    builder.emitIndent();
-    if (!t->annotations->annotations.empty()) {
-        visit(t->annotations);
-        builder.spc();
-    }
-    builder.append("parser ");
-    builder.append(t->name);
-    visit(t->typeParameters);
-    visit(t->applyParams);
-    if (isDeclaration) builder.endOfStatement();
+    // Assume only one parse, would need to write the parser again (TODO: if there is logic of parsing)
+    // ori begin
+    // builder.emitIndent();
+    // if (!t->annotations->annotations.empty()) {
+    //     visit(t->annotations);
+    //     builder.spc();
+    // }
+    // builder.append("parser ");
+    // builder.append(t->name);
+    // visit(t->typeParameters);
+    // visit(t->applyParams);
+    // if (isDeclaration) builder.endOfStatement();
+    // ori end
     std::cout << "Exit ToNPL::preorder(const IR::Type_Parser *t)" << std::endl;
     return false;
 }
@@ -723,26 +726,28 @@ bool ToNPL::preorder(const IR::Declaration_Constant *cst) {
 
 bool ToNPL::preorder(const IR::Declaration_Instance *i) {
     std::cout << "Enter ToNPL::preorder(const IR::Declaration_Instance *i)" << i->toString() << std::endl;
-    dump(3);
-    if (!i->annotations->annotations.empty()) {
-        visit(i->annotations);
-        builder.spc();
-    }
-    auto type = i->type->getP4Type();
-    CHECK_NULL(type);
-    visit(type);
-    builder.append("(");
-    setVecSep(", ");
-    visit(i->arguments);
-    doneVec();
-    builder.append(")");
-    builder.spc();
-    builder.append(i->name);
-    if (i->initializer != nullptr) {
-        builder.append(" = ");
-        visit(i->initializer);
-    }
-    builder.endOfStatement();
+    // ori beg
+    // dump(3);
+    // if (!i->annotations->annotations.empty()) {
+    //     visit(i->annotations);
+    //     builder.spc();
+    // }
+    // auto type = i->type->getP4Type();
+    // CHECK_NULL(type);
+    // visit(type);
+    // builder.append("(");
+    // setVecSep(", ");
+    // visit(i->arguments);
+    // doneVec();
+    // builder.append(")");
+    // builder.spc();
+    // builder.append(i->name);
+    // if (i->initializer != nullptr) {
+    //     builder.append(" = ");
+    //     visit(i->initializer);
+    // }
+    // builder.endOfStatement();
+    // ori end
     std::cout << "Exit ToNPL::preorder(const IR::Declaration_Instance *i)" << std::endl;
     return false;
 }
@@ -939,9 +944,11 @@ bool ToNPL::preorder(const IR::Member *e) {
     if (e->member == "apply") {
         // Assume we would look up at most once per table
         // TODO: consider other scenarios
-        builder.append("lookup"); // NEW
+        builder.append("lookup(0)"); // NEW
+        isapply = true;
     } else {
         builder.append(e->member);
+        isapply = false;
     }
     expressionPrecedence = prec;
     std::cout << "Exit ToNPL::preorder(const IR::Member *e)" << std::endl;
@@ -1147,16 +1154,30 @@ bool ToNPL::preorder(const IR::MethodCallExpression *e) {
         builder.append(">");
         isDeclaration = decl;
     }
-    builder.append("(");
-    setVecSep(", ");
-    expressionPrecedence = DBPrint::Prec_Low;
-    withinArgument = true;
-    visit(e->arguments);
-    withinArgument = false;
-    doneVec();
-    builder.append(")");
-    if (useParens) builder.append(")");
-    expressionPrecedence = prec;
+    // ori beg
+    // builder.append("(");
+    // setVecSep(", ");
+    // expressionPrecedence = DBPrint::Prec_Low;
+    // withinArgument = true;
+    // visit(e->arguments);
+    // withinArgument = false;
+    // doneVec();
+    // builder.append(")");
+    // if (useParens) builder.append(")");
+    // expressionPrecedence = prec;
+    // ori end
+    if (isapply == false) {
+        builder.append("(");
+        setVecSep(", ");
+        expressionPrecedence = DBPrint::Prec_Low;
+        withinArgument = true;
+        visit(e->arguments);
+        withinArgument = false;
+        doneVec();
+        builder.append(")");
+        if (useParens) builder.append(")");
+        expressionPrecedence = prec;
+    }
     std::cout << "Exit ToNPL::preorder(const IR::MethodCallExpression *e)" << std::endl;
     return false;
 }
@@ -1484,24 +1505,40 @@ bool ToNPL::preorder(const IR::P4Control *c) {
     // std::cout << "Enter ToNPL::preorder(const IR::P4Control *c)" << c->name << std::endl;  // Control name
     std::cout << "Enter ToNPL::preorder(const IR::P4Control *c)" << c->toString() << std::endl;
     dump(1);
-    bool decl = isDeclaration;
-    isDeclaration = false;
-    visit(c->type);
-    isDeclaration = decl;
-    if (c->constructorParams->size() != 0) visit(c->constructorParams);
-    builder.spc();
-    builder.blockStart();
+    // ori beg
+    // bool decl = isDeclaration;
+    // isDeclaration = false;
+    // visit(c->type);
+    // isDeclaration = decl;
+    // if (c->constructorParams->size() != 0) visit(c->constructorParams);
+    // builder.spc();
+    // builder.blockStart();
+    // for (auto s : c->controlLocals) {
+    //     builder.emitIndent();
+    //     visit(s);
+    //     builder.newline();
+    // }
+
+    // builder.emitIndent();
+    // builder.append("apply ");
+    // ori end
+
+    // NEW beg
+    
     for (auto s : c->controlLocals) {
         builder.emitIndent();
         visit(s);
         builder.newline();
     }
-
     builder.emitIndent();
-    builder.append("apply ");
+    builder.append("program ");
+    builder.append(c->getName());
+    builder.spc();
+    // ori: builder.blockStart();
+    // NEW end
     visit(c->body);
-    builder.newline();
-    builder.blockEnd(true);
+    // ori: builder.newline();
+    // ori: builder.blockEnd(true);
     std::cout << build_string(count);
     sub(count);
     std::cout << "Exit ToNPL::preorder(const IR::P4Control *c)" << std::endl;
@@ -1574,8 +1611,8 @@ bool ToNPL::preorder(const IR::P4Action *c) {
     ToNPL rec(tmp_builder, showIR);
     c->body->apply(rec);
     cstring s = tmp_builder.toString();
-    s = "\t\tfields_assign() { \n\t\t\tif (_LOOKUP0 == 1) " + s;
-    s += " \n\t\t}";
+    s = "\tfields_assign() { \n\t\tif (_LOOKUP0 == 1) " + s;
+    s += " \n\t}";
     // std::cout << "--------------s = " << s << std::endl;
     std::string new_string = s.c_str();
     action_map[c->name] = new_string;
@@ -1617,7 +1654,7 @@ bool ToNPL::preorder(const IR::ParserState *s) {
 }
 
 bool ToNPL::preorder(const IR::P4Parser *c) {
-    std::cout << "ToNPL::preorder(const IR::P4Parser *c)" << std::endl;
+    std::cout << "Enter ToNPL::preorder(const IR::P4Parser *c)" << std::endl;
     dump(1);
     bool decl = isDeclaration;
     isDeclaration = false;
@@ -1625,18 +1662,20 @@ bool ToNPL::preorder(const IR::P4Parser *c) {
     isDeclaration = decl;
     if (c->constructorParams->size() != 0) visit(c->constructorParams);
     builder.spc();
-    builder.blockStart();
-    setVecSep("\n", "\n");
-    preorder(&c->parserLocals);
-    doneVec();
-    // explicit visit of parser states
-    for (auto s : c->states) {
-        if (s->isBuiltin()) continue;
-        builder.emitIndent();
-        visit(s);
-        builder.append("\n");
-    }
-    builder.blockEnd(true);
+
+    // No need to visit the states (TODO: deal with complex parsers)
+    // builder.blockStart();
+    // setVecSep("\n", "\n");
+    // preorder(&c->parserLocals);
+    // doneVec();
+    // // explicit visit of parser states
+    // for (auto s : c->states) {
+    //     if (s->isBuiltin()) continue;
+    //     builder.emitIndent();
+    //     visit(s);
+    //     builder.append("\n");
+    // }
+    // builder.blockEnd(true);
     return false;
 }
 
@@ -1695,6 +1734,10 @@ bool ToNPL::preorder(const IR::Key *v) {
         if (s.size() > len) len = s.size();
         kf.emplace(f, s);
     }
+    std::cout << "map size = " << kf.size() << std::endl;
+    // for (auto f : v->keyElements) {
+    //     std::cout << "f->getType() = " << P4::TypeInference::getType(f) << std::endl; 
+    // }
     // print_kf(kf); // New test what is stored in kf
     // Ori:
     // for (auto f : v->keyElements) {
@@ -1764,7 +1807,7 @@ bool ToNPL::preorder(const IR::Property *p) {
         builder.blockStart();
         for (cstring cstr : vec) {
             for (auto &a : action_para_map[cstr]) {
-                builder.append("\t\t\t" + a.second + "   " + a.first + ";\n");
+                builder.append("\t\t" + a.second + "   " + a.first + ";\n");
             }
         }
         builder.blockEnd(true);
@@ -1776,14 +1819,15 @@ bool ToNPL::preorder(const IR::Property *p) {
         builder.append("maxsize : ");
         visit(p->value);
         builder.newline();
-        // TODO: better way instead of setting \t\t
-        builder.append("\t\tminsize : ");
+        // TODO: better way instead of setting \t
+        builder.append("\tminsize : ");
         visit(p->value);
         // visit(p->value);
     } else if (p->name == "default_action") {
-        builder.append(p->name);
-        builder.append(" = ");
-        visit(p->value);
+        // There is no default action in npl
+        // ori: builder.append(p->name);
+        // ori: builder.append(" = ");
+        // ori: visit(p->value);
     }
     std::cout << "Exit ToNPL::preorder(const IR::Property *p)" << std::endl;
     return false;
@@ -1869,9 +1913,9 @@ bool ToNPL::preorder(const IR::P4Table *c) {
     std::string tmp_str = find_match_type(c);
     assert(tmp_str == "exact" || tmp_str == "ternary" || tmp_str == "lpm");
     if (tmp_str == "exact") {
-        builder.append("\t\ttable_type : index;\n");
+        builder.append("\ttable_type : index;\n");
     } else {
-        builder.append("\t\ttable_type : tcam;\n");
+        builder.append("\ttable_type : tcam;\n");
     }
     visit(c->properties);
     doneVec();
