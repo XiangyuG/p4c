@@ -58,7 +58,8 @@ class ToNPL : public Inspector {
     std::vector<ListPrint> listTerminators;
     size_t listTerminators_init_apply_size;
 
-    std::map<cstring, std::string> action_map; // NEW key: action name, value: action content
+    // NEW key: action name, value: action content
+    std::map<cstring, std::string> action_map; 
     // NEW key: action name; value: map<..., ...> key: parameter name in action, value: parameter type
     std::map<cstring, std::map<cstring, std::string>> action_para_map; 
 

@@ -1718,11 +1718,16 @@ void print_kf(std::map<const IR::KeyElement *, cstring> kf) {
     }
 }
 
+std::string update_type_of_expression(cstring str) {
+    str = str.replace('<', '[');
+    str = str.replace('>', ']');
+    return str.c_str();
+}
+
 bool ToNPL::preorder(const IR::Key *v) {
     std::cout << "Enter ToNPL::preorder(const IR::Key *v)" << v->toString() << std::endl;
     dump(2);
-    builder.blockStart();
-
+    
     std::map<const IR::KeyElement *, cstring> kf;
     size_t len = 0;
     for (auto f : v->keyElements) {
@@ -1735,9 +1740,22 @@ bool ToNPL::preorder(const IR::Key *v) {
         kf.emplace(f, s);
     }
     std::cout << "map size = " << kf.size() << std::endl;
-    // for (auto f : v->keyElements) {
-    //     std::cout << "f->getType() = " << P4::TypeInference::getType(f) << std::endl; 
-    // }
+    int num = 0;
+    builder.append("keys ");
+    builder.blockStart();
+    if (kf.size() > 0) {
+        for (auto f : v->keyElements) {
+            // std::cout << "type is " << f->expression->type->toString() << std::endl; // showing the type of element
+            cstring type_str = f->expression->type->toString();
+            std::string updated_type_str = update_type_of_expression(type_str);
+            std::string var = "V" + std::to_string(num);
+            builder.emitIndent();
+            builder.append(updated_type_str + "  " + var);
+            builder.endOfStatement(true);
+            num++;
+        }
+    }
+    builder.blockEnd(true);
     // print_kf(kf); // New test what is stored in kf
     // Ori:
     // for (auto f : v->keyElements) {
@@ -1755,7 +1773,9 @@ bool ToNPL::preorder(const IR::Key *v) {
     //     }
     //     builder.endOfStatement(true);
     // }
-    int num = 0;
+    builder.append("\tkey_construct() ");
+    builder.blockStart();
+    num = 0;
     for (auto f : v->keyElements) {
         dump(2, f, 2);
         builder.emitIndent();
@@ -1793,7 +1813,6 @@ bool ToNPL::preorder(const IR::Property *p) {
     // ori: builder.append(p->name);
     // ori: builder.append(" = ");
     if (p->name == "key") {
-        builder.append("key_construct() ");
         visit(p->value);
     } else if (p->name == "actions") {
         // ori: builder.append(p->name);
