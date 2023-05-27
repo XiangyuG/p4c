@@ -36,6 +36,10 @@ class ToNPL : public Inspector {
                                /// Used for debugging.
     bool startParser = false;
     bool isapply = false;
+    bool isStandardmetadataPrint = false;  // NEW whether we have output the standard_metadata structure or not
+    bool firstControlBlock = true; // NEW whether this is the first time we parse P4Control block
+    int num_of_control_block = 0;
+    int curr_control_block_num = 0;
 
     int count = 0;
     struct VecPrint {
@@ -62,6 +66,25 @@ class ToNPL : public Inspector {
     std::map<cstring, std::string> action_map; 
     // NEW key: action name; value: map<..., ...> key: parameter name in action, value: parameter type
     std::map<cstring, std::map<cstring, std::string>> action_para_map; 
+
+    // NEW: TODO: set one map to map from standard_metadata to one structure in NPL
+    std::map<std::string, std::string> standard_metadata_mp = {
+        {"ingress_port", "bit[9]"},
+        {"egress_spec", "bit[9]"},
+        {"egress_port", "bit[9]"},
+        {"instance_type", "bit[32]"},
+        {"packet_length", "bit[32]"},
+        {"enq_timestamp", "bit[32]"},
+        {"enq_qdepth", "bit[19]"},
+        {"deq_timedelta", "bit[32]"},
+        {"deq_qdepth", "bit[19]"},
+        {"ingress_global_timestamp", "bit[48]"},
+        {"egress_global_timestamp", "bit[48]"},
+        {"mcast_grp", "bit[16]"},
+        {"egress_rid", "bit[16]"},
+        {"checksum_error", "bit[1]"},
+        {"priority", "bit[3]"}
+    };
 
     void setVecSep(const char *sep, const char *term = nullptr) {
         vectorSeparator.push_back(VecPrint(sep, term));

@@ -158,11 +158,29 @@ void ToNPL::dump(unsigned depth, const IR::Node *node, unsigned adjDepth) {
         builder.emitIndent();
 }
 
+std::string generate_standard_metadata(std::map<std::string, std::string>& mp) {
+    std::string ret_str = "struct standard_metadata_t {\n";
+    ret_str += "\tfields {\n";
+    for (auto &a : mp) {
+        ret_str += "\t\t" + a.second + "\t" + a.first + "\n";
+    }
+    ret_str += "\t}\n";
+    ret_str += "}\n";
+    ret_str += "bus standard_metadata_t\t\tstandard_metadata;\n";
+    return ret_str;
+}
+
 bool ToNPL::preorder(const IR::P4Program *program) {
     std::set<cstring> includesEmitted;
 
     bool first = true;
     dump(2);
+    // NEW: count the total number of P4Control blocks
+    for (auto a : program->objects) {
+        if (a->is<IR::P4Control>()) {
+            num_of_control_block++;
+        }
+    }
     for (auto a : program->objects) {
         // Check where this declaration originates
         cstring sourceFile = ifSystemFile(a);
@@ -196,6 +214,11 @@ bool ToNPL::preorder(const IR::P4Program *program) {
                     // ori: builder.appendLine("\"");
                 }
                 includesEmitted.emplace(sourceFile);
+            }
+            if (!isStandardmetadataPrint) {
+                isStandardmetadataPrint = true;
+                std::string standard_metadata_str = generate_standard_metadata(standard_metadata_mp);
+                builder.append(standard_metadata_str);
             }
             first = false;
             continue;
@@ -619,6 +642,7 @@ bool ToNPL::process(const IR::Type_StructLike *t, const char *name) {
     }
     builder.blockEnd(true); // NEW
     builder.blockEnd(true);
+    // NEW define either bus of 
     std::cout << "Exit ToNPL::process(const IR::Type_StructLike *t, const char *name)" << std::endl;
     return false;
 }
@@ -626,7 +650,7 @@ bool ToNPL::process(const IR::Type_StructLike *t, const char *name) {
 bool ToNPL::preorder(const IR::Type_Parser *t) {
     std::cout << "Enter ToNPL::preorder(const IR::Type_Parser *t)" << t->toString() << std::endl;
     if (!startParser) {
-        builder.append("parser_node start"); // NEW
+        builder.append("parser_node start "); // NEW
         builder.blockStart(); // NEW
         builder.append("\t root_node : 1;\n"); // NEW
         builder.append("\t end_node : 1;\n"); // NEW
@@ -1283,11 +1307,18 @@ bool ToNPL::preorder(const IR::BlockStatement *s) {
         visit(s->annotations);
         builder.spc();
     }
-    builder.blockStart();
+    // NEW add one { only when reaching the first control block
+    if (firstControlBlock) {
+        builder.blockStart();    
+        firstControlBlock = false;
+    }
     setVecSep("\n", "\n");
     preorder(&s->components);
     doneVec();
-    builder.blockEnd(false);
+    // NEW close using { when finishing parsing the last control block
+    if (num_of_control_block == curr_control_block_num) {
+        builder.blockEnd(false);
+    }
     std::cout << "Exit ToNPL::preorder(const IR::BlockStatement *s)" << std::endl;
     return false;
 }
@@ -1504,6 +1535,7 @@ bool ToNPL::preorder(const IR::P4Control *c) {
     std::cout << build_string(count);
     // std::cout << "Enter ToNPL::preorder(const IR::P4Control *c)" << c->name << std::endl;  // Control name
     std::cout << "Enter ToNPL::preorder(const IR::P4Control *c)" << c->toString() << std::endl;
+    curr_control_block_num++;
     dump(1);
     // ori beg
     // bool decl = isDeclaration;
@@ -1531,8 +1563,11 @@ bool ToNPL::preorder(const IR::P4Control *c) {
         builder.newline();
     }
     builder.emitIndent();
-    builder.append("program ");
-    builder.append(c->getName());
+    if (firstControlBlock) {
+        builder.append("program ");
+        builder.append(c->getName());
+    }
+    
     builder.spc();
     // ori: builder.blockStart();
     // NEW end
